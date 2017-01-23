@@ -1,0 +1,95 @@
+---
+title: "caret_lab"
+author: "Piotr Gurkowski 20012"
+date: "14 stycznia 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(C50)
+data(churn)
+library(caret)
+library(MASS)
+library(mlbench)
+churnTrain
+churnTest
+set.seed(23)
+```
+
+```{r randomFOrest1, cache=TRUE}
+ctrl <- trainControl(method="repeatedcv",number=2,repeats=5)
+
+fit <- train(churn ~ ., data = churnTrain, method = "rf", trControl = ctrl, ntree = 10)
+fit
+```
+
+```{r dane, cache=TRUE}
+data(iris)
+TrainData <- iris[,1:4]
+TrainClasses <- iris[,5]
+head(TrainData,3)
+head(TrainClasses,3)
+
+TrainData <- churnTrain[,9:10]
+TrainClasses <- churnTrain[,4]
+head(churnTrain,3)
+head(TrainData,3)
+head(TrainClasses,3)
+```
+
+```{r nnet,cache=TRUE}
+#knnFit1 <- train(TrainData, TrainClasses,
+#                 method = "knn",
+#                 k=3,
+#                 trControl = trainControl(method = "boot"))
+#knnFit1
+
+
+nnetFit <- train(TrainData, TrainClasses,
+                 method = "nnet",
+                 preProcess = "range", 
+                 tuneLength = 2,
+                 trace = FALSE,
+                 maxit = 10)
+```
+
+```{r shownnetFit,cache=TRUE}
+nnetFit
+```
+
+```{r knn, cache=TRUE}
+knnFit1 <- train(TrainData, TrainClasses,
+                 method = "knn",
+                 preProcess = c("center", "scale"),
+                 tuneLength = 10,
+                 trControl = trainControl(method = "boot"))
+knnFit1
+```
+
+```{r knn_cv, cache=TRUE}
+knnFit1 <- train(TrainData, TrainClasses,
+                 method = "knn",
+                 preProcess = c("center", "scale"),
+                 tuneLength = 10,
+                 trControl = trainControl(method = "cv"))
+knnFit1
+```
+
+```{r boston housing}
+library(mlbench)
+data(BostonHousing)
+
+lmFit <- train(medv ~ . + rm:lstat,
+               data = BostonHousing, 
+               method = "lm")
+
+library(rpart)
+rpartFit <- train(medv ~ .,
+                  data = BostonHousing,
+                  method = "rpart",
+                  tuneLength = 9)
+```
+
+
+

@@ -1,0 +1,410 @@
+---
+title: "ggplot"
+author: "Piotr Gurkowski 20012"
+date: "19 grudnia 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r install1 caret1}
+#install.packages("caret", dependencies = c("Depends", "Suggests"))
+library(ggplot2)
+library(mlbench)
+library(caret)
+library(tabplot)
+library(lattice)
+library(plotly)
+data(Sonar)
+knitr::kable(summary(Sonar))
+```
+
+```{r podzial zbioru danych, cache=TRUE}
+
+set.seed(23)
+inTraining <- 
+    createDataPartition(
+        # atrybut do stratyfikacji
+        y = Sonar$Class,
+        # procent w zbiorze ucz¹cym
+        p = .75,
+        # chcemy indeksy a nie listê
+        list = FALSE)
+
+training <- Sonar[ inTraining,]
+testing  <- Sonar[-inTraining,]
+```
+
+```{r histograms, cache=TRUE}
+ggplot(Sonar, aes(V1, fill=Sonar$Class,
+                alpha=0.25)) + 
+    geom_density()
+hist(Sonar$V1)
+hist(training$V1)
+hist(testing$V1)
+```
+
+```{r table_plot, fig.width=10, fig.height=4}
+require(ggplot2)
+#data(Sonar)
+
+tableplot(Sonar)
+#data(training)
+
+tableplot(training)
+#data(testing)
+tableplot(testing)
+
+
+barplot(as.matrix(Sonar), main="Sonar")
+
+barplot(as.matrix(training), main="training")
+
+
+barplot(as.matrix(testing), main="testing")
+
+```
+
+```{r schemat uczenia, cache=TRUE}
+ctrl <- trainControl(
+    # powtórzona ocena krzy¿owa
+    method = "repeatedcv",
+    # liczba podzia³ów
+    number = 2,
+    # liczba powtórzeñ
+    repeats = 5)
+```
+
+```{r ctrl, cache=TRUE}
+#knitr::kable(summary(ctrl))
+#head(ctrl)
+```
+
+```{r uczenie}
+set.seed(23)
+fit <- train(Class ~ .,
+             data = training,
+             method = "rf",
+             trControl = ctrl,
+             # Paramter dla algorytmu ucz¹cego
+             ntree = 10)
+```
+
+```{r fit, cache=TRUE}
+fit
+```
+
+```{r predykcja, cache=TRUE}
+rfClasses <- predict(fit, newdata = testing)
+confusionMatrix(data = rfClasses, testing$Class)
+```
+
+```{r optymalizacja parametrow, cache=TRUE}
+rfGrid <- expand.grid(mtry = 10:30)
+gridCtrl <- trainControl(
+    method = "repeatedcv",
+    summaryFunction = twoClassSummary,
+    classProbs = TRUE,
+    number = 2,
+    repeats = 5)
+
+set.seed(23)
+fitTune <- train(Class ~ .,
+             data = training,
+             method = "rf",
+             metric = "ROC",
+             preProc = c("center", "scale"),
+             trControl = gridCtrl,
+             tuneGrid = rfGrid,
+             ntree = 30)
+
+fitTune
+```
+
+```{r wizualizacje }
+ggplot(fitTune) + theme_bw()
+```
+
+```{r predykcja1, cache=TRUE}
+rfTuneClasses <- predict(fitTune,
+                         newdata = testing)
+confusionMatrix(data = rfTuneClasses, 
+                testing$Class)
+```
+
+```{r predykcja2, cache=TRUE}
+library(pROC)
+rfTuneProbs <- predict(fitTune, 
+                       newdata = testing,
+                       type="prob")
+rocCurve <- roc(response = testing$Class,
+                predictor = rfTuneProbs[, "M"],
+                levels = rev(levels(testing$Class)))
+```
+
+```{r predykcja2 wykres roc, cache=TRUE}
+plot(rocCurve)
+```
+
+```{r cars1 dataset1, cache = TRUE}
+with (cars, plot(speed, dist))
+```
+
+```{r latticePlot, fig.width=10, fig.height=4, cache=TRUE}
+state <- data.frame(state.x77, region = state.region)
+xyplot(Life.Exp ~ Income | region, data = state, layout = c(4, 1))
+```
+
+```{r ggplot222}
+qplot(speed, dist, data = cars)
+```
+
+```{r ggplot prz1, fig.width=10, fig.height=4, cache=TRUE}
+p <- ggplot() + 
+coord_cartesian() +
+scale_x_continuous()+
+scale_y_continuous()+
+scale_color_hue() +
+facet_wrap(~cut) +
+layer(data=diamonds, 
+  mapping=aes(
+      x=carat, 
+      y=price,
+      color=color), 
+  stat="identity", 
+  geom="point", 
+  position=
+   position_jitter()
+)
+p
+
+p + layer(
+ data=diamonds,
+ mapping=aes(
+   x=carat,
+   y=price),
+ stat="smooth",
+ params=list(
+   method="glm",
+   formula=
+     y~poly(x,2),
+   color="black"),
+ geom="smooth",
+ position=
+  position_identity()
+)
+```
+
+```{r ggplotPrz2, fig.width=10, fig.height=4, cache=TRUE}
+ggplot(
+  cars, 
+  aes(x=speed, 
+      y=dist,
+   color=factor(speed*dist)
+   )
+) +
+geom_point()
+
+ggplot(
+  diamonds, 
+  aes(x=price, 
+      y=carat,
+   color=factor(color)
+   )
+) +
+geom_point()
+
+ggplot(
+  diamonds, 
+  aes(x=carat, 
+      y=price,
+   color=factor(color)
+   )
+) +
+geom_point()
+
+ggplot(
+  mpg, 
+  aes(x=displ, 
+      y=hwy,
+   color=factor(cyl)
+   )
+) +
+geom_point()+geom_line()
+```
+
+```{r warstwy, fig.width=10, fig.height=4, cache=TRUE}
+ggplot(
+  mpg, 
+  aes(x=displ, 
+      y=hwy,
+   color=factor(cyl)
+   )
+) +
+geom_bar(
+  stat="identity",
+  position=
+      "identity")
+
+ggplot(
+  mpg, 
+  aes(x=displ, 
+      y=hwy,
+   color=factor(cyl)
+   )
+) +
+geom_point() +
+geom_smooth(
+  data=subset(
+      mpg,
+      cyl != 5), 
+  method="lm")
+
+ggplot(
+  mpg, 
+  aes(x=displ, 
+      y=hwy)
+) +
+geom_point() +
+geom_smooth() + 
+facet_grid(. ~ year)
+```
+
+```{r hist1, fig.width=10, fig.height=4, cache=TRUE}
+head(mpg)
+
+ggplot(mpg, aes(hwy, fill=drv)) + 
+    geom_bar()
+
+ggplot(mpg, aes(hwy, fill=drv,
+                alpha=0.25)) + 
+    geom_density()
+
+ggplot(mpg, aes(hwy, fill=drv,
+                alpha=0.25)) + 
+    geom_density() + theme_bw()
+
+df=data.frame(x=1:10,y=factor(letters[1:5]))
+ggplot(df, aes(x, x, size=x)) + geom_point()
+
+df=data.frame(x=1:10,y=factor(letters[1:5]))
+ggplot(df, aes(x, x, color=x))+geom_point()
+
+df=data.frame(x=1:10,y=factor(letters[1:5]))
+ggplot(df, aes(y, y, shape=y))+geom_point()
+
+df=data.frame(x=1:10,y=factor(letters[1:5]))
+ggplot(df, aes(y, y, color=y))+geom_point()
+
+df=data.frame(x=1:10,y=factor(letters[1:5]))
+ggplot(df, aes(y, y, color=y))+geom_point()+ coord_trans(x="log10", y="log10")
+
+df=data.frame(x=1:10,y=factor(letters[1:5]))
+ggplot(df, aes(y, y, color=y))+geom_point()+ coord_polar(theta="x")
+```
+
+```{r przykl wsp, fig.width=10, fig.height=4, cache=TRUE}
+d=data.frame(height=c(1,2,2,3,4), weight=c(1,3,4,4,2))
+p = ggplot() +
+    geom_line(data=d, mapping=aes(x=height, y=weight)) +
+    geom_point(data=d, mapping=aes(x=height, y=weight), size=8, fill="white", shape=21) +
+    geom_text(data=d,mapping=aes(x=height, y=weight, label=seq(1,nrow(d))))
+
+p
+
+p + coord_flip()
+
+p + coord_trans(x="log10", y="log10")
+
+p + coord_equal()
+
+p + coord_polar(theta="x")
+
+require(maps)
+d = data.frame(map(database="italy", plot=F)[c("x", "y")])
+ggplot() + coord_map() +
+geom_polygon(data=d, mapping=aes(x=x, y=y), fill="red", color="black", size=0.2)
+
+require(maps)
+d = data.frame(map(database="italy", plot=F)[c("x", "y")])
+ggplot() + coord_map() +
+geom_polygon(data=d, mapping=aes(x=x, y=y), fill="red", color="black", size=0.2)+ coord_trans(x="log10", y="log10")
+
+require(maps)
+d = data.frame(map(database="italy", plot=F)[c("x", "y")])
+ggplot() + coord_map() +
+geom_polygon(data=d, mapping=aes(x=x, y=y), fill="red", color="black", size=0.2)+ coord_equal()
+
+require(maps)
+d = data.frame(map(database="italy", plot=F)[c("x", "y")])
+ggplot() + coord_map() +
+geom_polygon(data=d, mapping=aes(x=x, y=y), fill="red", color="black", size=0.2)+ coord_polar(theta="x")
+
+```
+
+```{r kolory, fig.width=10, fig.height=4, cache=TRUE}
+p <- ggplot(
+ data=mpg, 
+ aes(x=displ,
+   y=hwy,
+   fill=factor(cyl))
+ ) + 
+ geom_bar(
+   stat="identity",
+   position=
+       "identity")
+p
+
+p + scale_fill_brewer()
+
+p + scale_fill_brewer(
+  palette="Set1")
+
+p + scale_fill_brewer(
+  palette="Spectral")
+
+p +
+scale_fill_manual(
+  values=
+      c("red",
+        "blue",
+        "green",
+        "orange"))
+
+p +
+scale_fill_manual(
+  values=
+      c("#CC6666",
+        "#9999CC",
+        "#66CC99",
+        "#ffa500"))
+```
+
+```{r plotlllly, fig.width=10, fig.height=4, cache=TRUE}
+
+dsamp <- diamonds[sample(nrow(diamonds),1000),]
+
+p <- ggplot(dsamp, aes(carat, price,
+                       color=clarity)) + 
+    geom_point()
+ggplotly(p)
+
+p + layer(
+ data=dsamp,
+ mapping=aes(
+   x=carat,
+   y=price),
+ stat="smooth",
+ params=list(
+   method="glm",
+   formula=
+     y~poly(x,2),
+   color="black"),
+ geom="smooth",
+ position=
+  position_identity()
+)
+```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

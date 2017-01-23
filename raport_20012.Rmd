@@ -1,0 +1,254 @@
+---
+title: "Raport ZED"
+author: "Piotr Gurkowski 20012"
+date: "20 listopada 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r start, echo=FALSE}
+devtools::install_github("rstudio/EDAWR")
+```
+
+```{r start1, echo=FALSE,cache=TRUE}
+library(EDAWR)
+head(tb)
+tb1<-tb
+```
+
+```{r podsumowanie,cache=TRUE,echo=FALSE}
+knitr::kable(summary(tb1))
+```
+
+```{r infoBeforeClear, echo=FALSE, cache=TRUE}
+przedC<-nrow(tb1)
+```
+
+Liczba obserwacji przed czyszczeniem `r przedC`
+
+```{r clear,echo=FALSE,cache=TRUE}
+good<-complete.cases(tb1)
+tb2<-tb1[good,]
+badRow<-sum(!good)
+```
+
+Liczba obserwacji z NA `r badRow`
+
+```{r infoAfterClear, echo=FALSE, cache=TRUE}
+poC<-nrow(tb2)
+```
+
+Liczba obserwacji po czyszczenu `r poC`
+
+```{r podsumowaniePoCzyszczeniu,cache=TRUE,echo=FALSE}
+knitr::kable(summary(tb2))
+```
+
+```{r kolor_plot,echo=FALSE}
+plotf<-function(maleIn,femaleIn,countryIn,plotType="o"){
+g_range <- range(0, femaleIn, maleIn)
+
+# kobiety jako plot
+plot(femaleIn, type=plotType, col="blue", ylim=g_range, 
+   axes=FALSE, ann=FALSE)
+
+# oznaczanie osi x latami
+axis(1, at=1:length(x), lab=x)
+
+# oznaczanie osi y
+pop<-"Populacja"
+osx<-round(c(seq(0,g_range[2],length.out=5)),digits=0)
+axis(2, osx, las=1,at=osx,font=0.5)
+
+# ramka wykresu
+box()
+
+# mezczyzni jako druga linia na wykresie
+lines(maleIn, type=plotType, pch=22, lty=2, col="red")
+
+# nazwa wykresu
+title(main=paste( countryIn), col.main="red", font.main=4)
+
+# opis osi x
+title(xlab="Rok", col.lab=rgb(0,0.5,0),line=2)
+#opis osi y
+title(ylab=pop, col.lab=rgb(0,0.5,0),line=3)
+
+# legenda
+legend(1, g_range[2], c("K","M"), cex=0.8, 
+   col=c("blue","red"), pch=21:22, lty=1:2);
+}
+```
+
+```{r kolor_plot1,echo=FALSE}
+plotpointf<-function(maleIn,femaleIn,countryIn,plotType="o"){
+g_range <- range(0, femaleIn[,1], maleIn[,1])
+
+# kobiety jako plot
+plot(femaleIn[,2],femaleIn[,1], type=plotType, col="blue", ylim=g_range, 
+   axes=FALSE, ann=FALSE)
+
+# oznaczanie osi x latami
+axis(1, at=1:length(x), lab=x)
+
+# oznaczanie osi y
+pop<-"Populacja"
+osx<-round(c(seq(0,g_range[2],length.out=5)),digits=0)
+axis(2, osx, las=1,at=osx,font=0.5)
+
+# ramka wykresu
+box()
+
+# mezczyzni jako druga linia na wykresie
+lines(maleIn[,2],maleIn[,1], type=plotType, pch=22, lty=2, col="red")
+
+# nazwa wykresu
+title(main=paste( countryIn), col.main="red", font.main=4)
+
+# opis osi x
+title(xlab="Rok", col.lab=rgb(0,0.5,0),line=2)
+#opis osi y
+title(4,ylab=pop, col.lab=rgb(0,0.5,0),line=3)
+
+# legenda
+legend(1, g_range[2], c("K","M"), cex=0.8, 
+   col=c("blue","red"), pch=21:22, lty=1:2);
+}
+```
+
+```{r scatter_hist, echo=FALSE}
+scatterHist <- function(x, y, xlim, ylim, scatterProportion=3, ...)
+{
+  # Get call so that can transfer arguments to call
+  .parsXY <-.parsHist <- match.call()
+
+  # dane dla histogramu
+  .xhist <- hist(x, plot=FALSE, ...)
+  .yhist <- hist(y, plot=FALSE, ...)
+
+  # zakres wykresow
+  if( missing(xlim) )
+    xlim <- range(.xhist$breaks)
+  if( missing(ylim) )
+    ylim <- range(.yhist$breaks)
+  .top <- max(c(.xhist$counts, .yhist$counts))
+
+  # ustawienie layout
+  def.par <- par(no.readonly = TRUE)  # zapamietanie aktualnych ustawien
+  nf <- layout(matrix(c(2,0,1,3),2,2,byrow=TRUE),
+    c(scatterProportion,1), c(1,scatterProportion), TRUE)
+#layout.show(nf)
+
+  # scatter plot
+  par(mar=c(5,5,1,1))
+  .parsXY$main <- NULL
+  .parsXY$scatterProportion <- NULL
+  .parsXY[[1]] <- as.name("plot")
+  eval(.parsXY, sys.frame(sys.parent()))
+
+  # histogram x
+  par(mar=c(0,5,4,1))
+  .parsHist$x <- .parsHist$y <- .parsHist$xlab <- .parsHist$ylab <- NULL
+  .parsHist$scatterProportion <- NULL
+  .parsHist[[1]] <- as.name("barplot")
+  .parsHist$height <- .xhist$counts
+  .parsHist$axes <- FALSE
+  .parsHist$ylim <- c(0, .top/10)
+  .parsHist$space <- 0
+  eval(.parsHist, sys.frame(sys.parent()))
+
+  # histogram y
+  par(mar=c(5,0,1,4))
+  .parsHist$main <- NULL
+  .parsHist$ylim <- NULL
+  .parsHist$height <- .yhist$counts
+  .parsHist$xlim <- c(0, .top/10)
+  .parsHist$horiz <- TRUE
+  eval(.parsHist, sys.frame(sys.parent()))
+
+  #reset ustawien graficznych
+  par(def.par)
+}
+```
+
+```{r plec, cache=TRUE,echo=FALSE}
+
+tap<-tapply(tb2$child+tb2$adult+tb2$elderly,tb2$sex,sum)
+x<-sort.int(unique(tb2$year),decreasing = FALSE)
+c<-unique(tb2$country)
+female<-vector()
+male<-vector()
+
+for(i in 1:length(x)) {
+  #print(x[i])
+  tb2_temp<-subset(tb2,year==x[i])
+  tap<-tapply(tb2_temp$child+tb2_temp$adult+tb2_temp$elderly,tb2_temp$sex,sum)
+  #print("")
+  #tap
+  female<-c(female,tap[1])
+  
+  male<-c(male,tap[2])
+}
+print("Sumaryczna liczba zachorowa? kobiet we wszystkich krajach i latach")
+sum(as.numeric(female))
+
+print("Sumaryczna liczba zachorowa? m??czyzn we wszystkich krajach i latach")
+sum(as.numeric(male))
+
+```
+
+```{r plotAll, echo=FALSE, fig.width=6, fig.height=6}
+plotf(male,female,"")
+```
+
+```{r country_year,echo=FALSE}
+oldw <- getOption("warn")
+options(warn = -1)
+par(mfrow=c(2,3))
+  femaleAll<-matrix(nrow=0,ncol=2)
+  maleAll<-matrix(nrow=0,ncol=2)
+c<-unique(tb2$country)
+for(ci in 1:length(c)){
+  female1<-vector()
+  male1<-vector()
+  for(i in 1:length(x)) {
+    kraj_rok<-paste(c[ci])
+    tb2_temp<-subset(tb2,year==x[i]&country==c[ci])
+    tap<-tapply(tb2_temp$child+tb2_temp$adult+tb2_temp$elderly,tb2_temp$sex,sum)
+    if(length(tap)!=0)
+    {
+      if(!is.na(tap[1])&!is.na(tap[2])){
+      female1<-c(female1,tap[1])
+      femaleAll<-rbind(femaleAll,c(as.numeric(tap[1]),x[i]))
+      male1<-c(male1,tap[2])
+      maleAll<-rbind(maleAll,c(as.numeric(tap[2]),x[i]))
+    }
+    }
+  }
+  plotf(male1,female1,kraj_rok)
+  options(warn = oldw)
+}
+```
+
+```{r plotAllFM,echo=FALSE, fig.width=6, fig.height=5}
+oldw <- getOption("warn")
+options(warn = -1)
+
+par(mfrow=c(1,1))
+heading = paste("type=","p") 
+plotpointf(maleAll,femaleAll,"All","p")
+  
+x <- maleAll[,2]
+y <- maleAll[,1]
+scatterHist(x,y,xlab="X", main="Male", 
+scatterProportion=5)
+x <- femaleAll[,2]
+y <- femaleAll[,1]
+scatterHist(x,y, xlab="X", main="Female", 
+scatterProportion=5)
+options(warn = oldw)
+
+```
